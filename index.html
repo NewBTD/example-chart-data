@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Visualization: บัญชีเงินฝากออมทรัพย์</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background-color: #f9f9f9;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .chart-container {
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    canvas {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📊 Visualization: ข้อมูลบัญชีเงินฝากออมทรัพย์ (100 รายการ)</h1>
+
+  <div class="chart-container">
+    <h2>ประเภทลูกค้า</h2>
+    <canvas id="customerTypeChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>ภูมิภาคของบัญชี</h2>
+    <canvas id="regionChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>การกระจายยอดเงินเฉลี่ย (บาท)</h2>
+    <canvas id="averageBalanceChart"></canvas>
+  </div>
+
+  <script>
+    async function loadData() {
+      const res = await fetch('./savings_accounts_3000.json');
+      const data = await res.json();
+
+      // Count by customer type
+      const customerTypeCount = {};
+      const regionCount = {};
+      const averageBalances = [];
+
+      data.forEach(item => {
+
+        // customer_type
+        const ct = item.customer_type;
+        customerTypeCount[ct] = (customerTypeCount[ct] || 0) + 1;
+
+        // region
+        const rg = item.region;
+        regionCount[rg] = (regionCount[rg] || 0) + 1;
+
+        // average_balance
+        averageBalances.push(item.average_balance_6m);
+      });
+      console.log(customerTypeCount);
+
+      let pieConfig = {
+        type: 'pie',
+        data: {
+          labels: Object.keys(customerTypeCount),
+          datasets: [{
+            data: Object.values(customerTypeCount),
+            backgroundColor: ['#4CAF50', '#FF9800', '#2196F3']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'ประเภทลูกค้า'
+            }
+          }
+        }
+      }
+      // Chart 1: Customer Type
+      new Chart(document.getElementById('customerTypeChart'), pieConfig);
+
+      // Chart 2: Region
+      new Chart(document.getElementById('regionChart'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(regionCount),
+          datasets: [{
+            label: 'จำนวนบัญชี',
+            data: Object.values(regionCount),
+            backgroundColor: '#03A9F4'
+          }]
+        },
+        options: {
+          plugins: {
+            title: {
+              display: true,
+              text: 'ภูมิภาคของบัญชี'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Chart 3: Average Balance Distribution (histogram-like)
+      const buckets = {
+        'ต่ำกว่า 10K': 0,
+        '10K - 50K': 0,
+        '50K - 100K': 0,
+        '100K ขึ้นไป': 0
+      };
+
+      averageBalances.forEach(value => {
+        if (value < 10000) buckets['ต่ำกว่า 10K']++;
+        else if (value < 50000) buckets['10K - 50K']++;
+        else if (value < 100000) buckets['50K - 100K']++;
+        else buckets['100K ขึ้นไป']++;
+      });
+
+      new Chart(document.getElementById('averageBalanceChart'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(buckets),
+          datasets: [{
+            label: 'จำนวนบัญชี',
+            data: Object.values(buckets),
+            backgroundColor: '#9C27B0'
+          }]
+        },
+        options: {
+          plugins: {
+            title: {
+              display: true,
+              text: 'การกระจายยอดเงินเฉลี่ย'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    loadData();
+  </script>
+
+</body>
+</html>
